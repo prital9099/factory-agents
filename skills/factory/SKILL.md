@@ -37,6 +37,42 @@ agent files in `.claude/agents/`.
 Every agent reads `AGENTS.md` (or `CLAUDE.md`) for the repo's setup, dev server,
 validation commands and conventions. Nothing repo-specific lives in these files.
 
+## Approval gates (development mode)
+
+While the factory is under development, **no agent starts until the user has approved the
+previous agent's output.** This overrides the automatic flow in the diagram above. The
+diagram shows the order; the gates say when each step may start.
+
+How a gate works (`GATE(<name>, <what to review>)`):
+1. Set `awaiting` in `job.json` to the gate name.
+2. Show the user the output to review (file paths to open, a short summary, the verdict if
+   there is one) and say what will run next if they approve.
+3. **Stop and wait for the user's real reply in chat.** Never answer for them.
+4. Exactly `APPROVED` (any capitalisation, optional comment after it) is approval. Clear
+   `awaiting` and run the next step.
+5. Anything else is feedback. Append it verbatim to `<job folder>/feedback-log.md`, re-run
+   the **same** agent with that feedback (resume it with `SendMessage` when it has a name),
+   then ask the same gate again. The user can also say `STOP` to leave the job as it is.
+6. Silence, "ok", "go ahead" or your own judgement is not approval. If unsure, ask once more.
+
+Gates, in order (the first five are inside `spec-writer`, which asks for them through
+`spec-status.md`; pass the user's reply through verbatim):
+| Gate | After | Before |
+|---|---|---|
+| G1 | `spec-requirements` (`OPEN: 0`) | `spec-visualizer` |
+| G2 | `spec-visualizer` | `spec-testcases` |
+| G3 | `spec-testcases` | `spec-prompt-improver` |
+| G4 | (approval to run) | `spec-prompt-improver` |
+| G5 | `spec-prompt-improver` | spec is DONE |
+| G6 | spec DONE | `builder` (round 1) |
+| G7 | `builder` (every round) | the four reviewers |
+| G8 | the four reviews of a round | `approver`, or resuming the builder on CHANGES |
+| G9 | `approver` decision | merge to `main` |
+
+Record every approval in `job.json` as `"approvals": ["G1 <time>", ...]`. If a later
+change invalidates an earlier approval (for example requirement feedback after G2),
+say which gates must be approved again.
+
 ## Parallel jobs
 
 Every job runs in its own git worktree on its own branch, so several jobs can run
@@ -76,7 +112,7 @@ state that never lands in a commit.
 { "id": "003-rate-limiting", "feature": "Rate limit the signup form",
   "branch": "factory/003-rate-limiting",
   "worktree": "/Users/you/code/my-app-factory/003-rate-limiting",
-  "stage": "review", "round": 2,
+  "stage": "review", "round": 2, "awaiting": "G8", "approvals": ["G1 10:02"],
   "reviews": { "security": "CHANGES", "ux": "PASS", "ui": "pending", "code": "PASS" } }
 ```
 
@@ -86,6 +122,7 @@ state that never lands in a commit.
 - `reviews` holds the current round only. Each value is `pending`, `PASS` or
   `CHANGES`. Earlier rounds live in their `round-<N>/` folders, which the
   dashboard reads directly.
+- `awaiting` is the gate name the job is waiting on (empty when running); `approvals` lists approved gates.
 - Rewrite the whole file on every change. `worktree` is always an absolute path.
 
 ### Prompts
@@ -126,7 +163,8 @@ gets `5102 + 10n`, appended as ` Port: <port>.`
      the same agent with `SendMessage` to `spec-<job-id>`, passing their reply verbatim,
      and repeat.
    - `STATUS: BLOCKED`: go to **Needs human** with the `## Blocked` text.
-   - `STATUS: DONE`: check that `spec.md` exists and carry on.
+   - `STATUS: DONE`: check that `spec.md` exists, then **GATE G6**: show `spec.md` and ask
+     "Approve starting the builder?" Do not start the builder before `APPROVED`.
    If `spec/spec-status.md` is missing after a spec-writer run (an old-style one-shot
    run), just check that `spec.md` exists.
 4. **Build.** Set `stage: "build"`. Spawn `builder` **with the name
@@ -137,7 +175,9 @@ gets `5102 + 10n`, appended as ` Port: <port>.`
 
 Read the first line of `build.md`.
 
-- `STATUS: READY`: start the next review round.
+- `STATUS: READY`: **GATE G7**: show `build.md` and the branch, and ask "Approve starting the
+  four reviewers?" Start review round N only after `APPROVED`. On feedback, resume the builder with it,
+  then run Build check again.
 - `STATUS: BLOCKED`: go to **Needs human**.
 
 ### Review round N
@@ -153,7 +193,10 @@ Read the first line of `build.md`.
    round is done only when all four `review-*.md` files exist in `round-<N>/`.
    Never resume the builder mid-round. If a reviewer finishes without writing
    its file, or writes a first line that isn't a verdict, stop and tell the user.
-4. Decide:
+4. **GATE G8**: show the user all four verdicts and a short summary of each finding, with the
+   paths of the review files, and ask "Approve moving on?" Feedback on a review: re-run that
+   reviewer with the feedback (same round) and ask again. Decide only after `APPROVED`.
+5. Decide:
    - **All PASS**: go to **Approve**.
    - **Any CHANGES, resumes left**: set `stage: "build"`, then resume the same
      builder with `SendMessage` to `builder-<job-id>`:
@@ -167,14 +210,15 @@ Read the first line of `build.md`.
 ### Approve
 
 Set `stage: "approve"`. Spawn `approver` with the prompt `<paths> Final round: N.`
-When it finishes, read the first line of `decision.md`:
+(this happens only after G8 was approved). When it finishes, read the first line of `decision.md`
+and **GATE G9**: show the decision and its reasons.
 
-- `APPROVE`: go to **Merge**.
+- `APPROVE`: ask "Approve the merge to main?" Go to **Merge** only after `APPROVED`.
 - `ESCALATE`: go to **Needs human**.
 
 ### Merge
 
-The merge happens in the main checkout, so it must be clean and on `main`:
+Merge only after G9 was approved. The merge happens in the main checkout, so it must be clean and on `main`:
 `git status --porcelain -- . ':!factory/backlog.md'` prints nothing and
 `git branch --show-current` prints `main`. `factory/backlog.md` is exempt: every
 `/factory next` edits it, and job branches never touch it, so a dirty backlog

@@ -24,6 +24,27 @@ The skill is `skills/factory/` (`/factory`), with a video helper in `skills/fact
 3. Run: `pip install -r requirements.txt`
 4. Start a **new** Claude Code session.
 
+## Approval gates (development mode)
+No agent starts until you approve the previous agent's output. Reply exactly `APPROVED` to
+move on; anything else is treated as feedback and the **same** agent is re-run with it.
+Say `STOP` to leave the job where it is.
+
+| Gate | After | Before |
+|---|---|---|
+| G1 | `spec-requirements` (no open questions) | `spec-visualizer` |
+| G2 | `spec-visualizer` | `spec-testcases` |
+| G3 | `spec-testcases` | `spec-prompt-improver` |
+| G4 | your OK to run it | `spec-prompt-improver` |
+| G5 | `spec-prompt-improver` | spec is done |
+| G6 | spec done | `builder` |
+| G7 | `builder` (each round) | the four reviewers |
+| G8 | the four reviews | `approver`, or the builder's rework |
+| G9 | `approver` decision | merge to local `main` |
+
+Approvals are recorded in `factory/jobs/<job-id>/job.json` (`approvals`, `awaiting`).
+To go back to a faster flow later, remove the "Approval gates" section from
+`skills/factory/SKILL.md` and `agents/spec-writer.md`.
+
 ## Needs
 - Windows (the guide video uses the built-in Windows voice), Chrome, Python 3, Claude Code.
 - In each project: a git repo with a **`main`** branch, and an `AGENTS.md` (or `CLAUDE.md`)
@@ -34,9 +55,8 @@ In the project, start Claude Code and type:
 
     /factory <describe the feature>
 
-The spec stage will stop and ask you questions, then ask you to approve the mockup/video/spec
-and the test cases. Reply in chat. Nothing is approved for you. After the spec is approved
-it builds, reviews and merges to a local `main` (nothing is pushed).
+It stops after every agent and asks for your approval (see Approval gates). Nothing is approved for
+you. After the last gate it merges to a local `main` (nothing is pushed).
 
 You can also ask Claude to use a single agent, e.g. "use the reviewer-security agent on this branch".
 
