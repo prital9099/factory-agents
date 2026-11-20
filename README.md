@@ -8,14 +8,15 @@ merged code: **spec -> build -> four reviews -> approval -> merge**.
 |---|---|
 | `spec-writer` | Coordinates the spec stage and runs the four `spec-*` helpers below |
 | `spec-requirements` | Gathers requirements and asks questions; never assumes |
-| `spec-visualizer` | Builds a clickable HTML mockup, a narrated guide video and `spec.md` |
+| `spec-visualizer` | Builds a clickable HTML mockup and `spec.md`; renders the narrated guide video last |
 | `spec-testcases` | Writes Excel test cases, runs them on the mockup, records pass/fail |
 | `spec-prompt-improver` | Rewrites the intake prompt for next time |
 | `builder` | Implements the spec on its own branch and tests it |
 | `reviewer-security`, `reviewer-ux`, `reviewer-ui`, `reviewer-code` | Four review lenses |
 | `approver` | Final gate: APPROVE (merge) or ESCALATE (human) |
 
-The skill is `skills/factory/` (`/factory`), with a video helper in `skills/factory/tools/`.
+The skill is `skills/factory/` (`/factory`), with a video helper in `skills/factory/tools/` and
+question packs in `skills/factory/packs/`. See `CHANGES.md` for the latest changes.
 
 ## Install
 1. Unzip this folder.
@@ -23,6 +24,27 @@ The skill is `skills/factory/` (`/factory`), with a video helper in `skills/fact
    (it copies everything into `%USERPROFILE%\.claude` and backs up files it would overwrite).
 3. Run: `pip install -r requirements.txt`
 4. Start a **new** Claude Code session.
+
+## Approval gates (development mode)
+No agent starts until you approve the previous agent's output. Reply `APPROVED` (or a plain yes) to
+move on; anything else is treated as feedback and the **same** agent is re-run with it.
+Say `STOP` to leave the job where it is.
+
+| Gate | The user approves | Next |
+|---|---|---|
+| G1 | The draft HTML mockup and the answers to the questions | Final HTML is built, then the test cases from it |
+| G2 | The final HTML and the test cases (with `spec.md`) | Only now the guide video is built |
+| G3 | The guide video | `spec-prompt-improver` runs by itself, spec is done |
+| G4 | Spec done | `builder` |
+| G5 | `builder` (each round) | the four reviewers |
+| G6 | the four reviews | `approver`, or the builder's rework |
+| G7 | `approver` decision | merge to local `main` |
+
+The spec order is fixed: **HTML -> test cases -> video**. G1 to G3 are asked by `spec-writer`.
+
+Approvals are recorded in `factory/jobs/<job-id>/job.json` (`approvals`, `awaiting`).
+To go back to a faster flow later, remove the "Approval gates" section from
+`skills/factory/SKILL.md` and `agents/spec-writer.md`.
 
 ## Needs
 - Windows (the guide video uses the built-in Windows voice), Chrome, Python 3, Claude Code.
@@ -34,9 +56,8 @@ In the project, start Claude Code and type:
 
     /factory <describe the feature>
 
-The spec stage will stop and ask you questions, then ask you to approve the mockup/video/spec
-and the test cases. Reply in chat. Nothing is approved for you. After the spec is approved
-it builds, reviews and merges to a local `main` (nothing is pushed).
+It stops after every agent and asks for your approval (see Approval gates). Nothing is approved for
+you. After the last gate it merges to a local `main` (nothing is pushed).
 
 You can also ask Claude to use a single agent, e.g. "use the reviewer-security agent on this branch".
 
