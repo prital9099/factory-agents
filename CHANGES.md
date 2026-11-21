@@ -23,8 +23,26 @@ Based on `approval-gates`. Install with `install.ps1`, then start a new Claude C
 - `skills/factory/SKILL.md`: gate table, "what to open" order and step text updated; question
   packs added under `skills/factory/packs/`.
 
-## 3. Not changed
-`builder`, the four reviewers, `approver` and `render_video.py`.
+## 3. Builder works in sprints and stops after each one
+- `builder` now follows the steps used to build and test the attendance app:
+  1. Plan (sprint 1): read the spec, brief, test cases, mockup and test data; gap analysis
+     (missing, beyond requirements, conflicts between test cases and brief); open questions;
+     `SPRINTS.md` sprint plan.
+  2. Development sprints: one per run, rules before screens, names and messages taken from the
+     test cases, automated tests, browser check at desktop and phone width, commit.
+  3. Test preparation: optional test-only fixed date, test fixture reset before every case,
+     Playwright runner on visible Chrome with a live banner, results written to a copy of the
+     workbook in `test-results/`, runner checked against planted layout problems.
+  4. Test sprints: one area of the test cases per run, results by role and screen, every failure
+     explained (app bug, wrong test, conflict with the brief); conflict decisions recorded.
+- The builder stops after every sprint with `STATUS: NEEDS_INPUT` in `build.md`. Nothing beyond
+  the brief and the test cases is built; the brief wins every conflict.
+- `skills/factory/SKILL.md`: new gate **G4.S** handles each builder sprint (resume with the
+  user's reply verbatim; these resumes do not count toward `MAX_RESUMES`); `test-results/` added
+  to the job files.
+
+## 4. Not changed
+The four reviewers, `approver` and `render_video.py`.
 
 ## Notes
 - Not yet run end to end on a new job. Worked examples (jobs 001 and 002) are not in this repo.

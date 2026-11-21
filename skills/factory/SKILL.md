@@ -30,8 +30,9 @@ feature → spec-writer → builder → [security, ux, ui, code] → WAIT FOR AL
 |              | `reviewer-code`         | `round-N/review-code.md`                    |
 | approve      | `approver`              | `decision.md`                               |
 
-`MAX_RESUMES = 2`: after round 1 the builder can be resumed at most twice, so a
-run has at most 3 review rounds. To change the factory, edit this file and the
+`MAX_RESUMES = 2`: after round 1 the builder can be resumed at most twice for review
+CHANGES, so a run has at most 3 review rounds. Resumes at the builder's sprint gates (G4.S)
+do not count. To change the factory, edit this file and the
 agent files in `.claude/agents/`.
 
 Every agent reads `AGENTS.md` (or `CLAUDE.md`) for the repo's setup, dev server,
@@ -73,7 +74,8 @@ Gates, in order (the first three are inside `spec-writer`, which asks for them t
 The spec order is fixed: HTML, then test cases, then video. The video is never built before
 G2 is approved.
 | G4 | Spec DONE | `builder` (round 1) |
-| G5 | `builder` (every round) | the four reviewers |
+| G4.S | Each `builder` sprint: the plan, every development sprint, every test sprint, review fixes (`build.md` says `NEEDS_INPUT`) | the builder's next sprint |
+| G5 | `builder` (every round, after its last sprint) | the four reviewers |
 | G6 | the four reviews of a round | `approver`, or resuming the builder on CHANGES |
 | G7 | `approver` decision | merge to `main` |
 
@@ -111,6 +113,7 @@ state that never lands in a commit.
 <repo>/factory/jobs/<job-id>/job.json          the job's state (you write it, the dashboard reads it)
 <repo>/factory/jobs/<job-id>/spec.md
 <repo>/factory/jobs/<job-id>/build.md
+<repo>/factory/jobs/<job-id>/test-results/       results workbook (copy of testcases.xlsx) and run logs, by builder
 <repo>/factory/jobs/<job-id>/rework-<k>.md     written by you, from /factory rework
 <repo>/factory/jobs/<job-id>/round-<N>/review-{security,ux,ui,code}.md
 <repo>/factory/jobs/<job-id>/decision.md
@@ -191,9 +194,20 @@ gets `5102 + 10n`, appended as ` Port: <port>.`
 
 Read the first line of `build.md`.
 
-- `STATUS: READY`: **GATE G5**: show `build.md` and the branch, and ask "Approve starting the
-  four reviewers?" Start review round N only after `APPROVED`. On feedback, resume the builder with it,
-  then run Build check again.
+- `STATUS: NEEDS_INPUT`: a builder sprint is finished (the plan, a development sprint, a test
+  sprint, or the fixes for a review round). **GATE G4.S** (set `awaiting` to `G4.S <gate text>`):
+  read `## Gate`, `## Progress`, `## Result`, `## Conflicts and questions`, `## Output` and
+  `## Ask`. Open the files in `## Output` for the user (`SPRINTS.md`, the results workbook in
+  `test-results/`), and show the sprint result, the failures with their reasons and the
+  conflicts in plain language. Wait for the user's real reply in chat; never approve or decide
+  a conflict for them. Resume the same agent with `SendMessage` to `builder-<job-id>`,
+  passing the reply verbatim, then run Build check again. These sprint resumes do not count
+  toward `MAX_RESUMES`. If the resume fails ("No transcript found"), spawn a fresh `builder`
+  with the same paths, tell it to continue from `build.md` and `SPRINTS.md`, and pass the reply
+  verbatim.
+- `STATUS: READY`: every builder sprint is approved. **GATE G5**: show `build.md` and the branch,
+  and ask "Approve starting the four reviewers?" Start review round N only after `APPROVED`. On
+  feedback, resume the builder with it, then run Build check again.
 - `STATUS: BLOCKED`: go to **Needs human**.
 
 ### Review round N
