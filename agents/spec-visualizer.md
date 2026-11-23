@@ -58,6 +58,30 @@ first screen, never an empty shell. Give every scenario a stable id on its eleme
 `data-scenario="<id>"`, and every action a stable `data-testid`, so the later test
 scripts can drive it.
 
+**Test hooks (page contract for the test-case step).** The test-case agent reads every
+control of this page with `tc_inventory.py`, so in `Mode: final` the page must have:
+
+- `window.__mock` with `roles` (`[{id, code, label}]`, code like `TCH`, label as the role is
+  called on screen), `screens` (`[{id, code, label, roles: [role ids allowed]}]`),
+  `states` (`[{id, screen, label, roles?}]`, every state a screen can be in: saved, locked,
+  box open, empty list, error shown, no data), and the functions `reset()` (back to the
+  starting data), `login(roleId)`, `open(screenId)` (returns `false` when the signed-in role
+  may not open it) and `setState(stateId)`.
+- Every screen in an element with `data-screen="<screen id>"`; the menu inside
+  `data-nav`; boxes and pop-ups with `role="dialog"` or `data-dialog`.
+- A `data-testid` on every button, link, menu item, tab, dropdown, input, checkbox, radio
+  and table. Repeated row controls share one id (every child's Absent option is
+  `opt-absent`).
+- Real form controls with their limits as attributes: `<select>` with all its options
+  and the default selected; inputs with `type`, `required`, `min`, `max`, `maxlength`,
+  `pattern` as the brief says; `disabled` set whenever the brief says the control cannot
+  be used in that state.
+- Counts and calculated values in `data-calc="<name>"`, messages in `data-msg="<name>"`,
+  empty states in `data-empty="<name>"`.
+
+Run `python ~/.claude/skills/factory/tools/tc_inventory.py spec/requirements.html
+spec/.work/inventory.json` before you report READY; it must exit 0.
+
 ## 2. guide.mp4
 
 A narrated video that shows a new user how to navigate requirements.html.
@@ -83,4 +107,5 @@ checked in the HTML.
 ## Report
 
 Finish with `spec/visualizer-status.md`: first line `STATUS: READY` or
-`STATUS: BLOCKED`, then the list of files you wrote.
+`STATUS: BLOCKED`, then the list of files you wrote. In `Mode: final`, READY needs the
+inventory check above to pass.

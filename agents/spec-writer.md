@@ -112,10 +112,20 @@ After Gate A approval nothing about the rules changes without going back to Gate
 1. Run `spec-visualizer` with `Mode: final` (finishes `requirements.html` and `spec.md`,
    no video). Wait for it.
 2. Then run `spec-testcases`. It reads the frozen HTML, so it must start after step 1.
-3. Check `visualizer-status.md` and `test-results.md`. If either is `BLOCKED`, write
-   `BLOCKED`.
-4. Write `NEEDS_INPUT` for **Gate B**: open the final mockup, the test cases and the test
-   results summary, and read `spec.md`. Say that the video comes next, only after approval.
+3. Check `visualizer-status.md`, `testcases-status.md` and `test-results.md`.
+   - `testcases-status.md` is `BLOCKED` because the mockup breaks the page contract: run
+     `spec-visualizer` with `Mode: final` again, passing the listed problems, then
+     `spec-testcases` again (at most twice; then write `BLOCKED`).
+   - `testcases-status.md` is `NEEDS_INPUT`: the test-case step found behaviour the brief
+     does not state. Write `NEEDS_INPUT` with its questions (before Gate B). Pass the reply
+     verbatim to `spec-testcases`. If an answer changes a rule, run `spec-requirements`
+     with `Mode: update` and go back to Gate A instead.
+   - Any other `BLOCKED`: write `BLOCKED`.
+   Never show Gate B while coverage has gaps: `testcases-status.md` must say `READY`.
+4. Write `NEEDS_INPUT` for **Gate B**: open the test case workbook (`testcases.xlsx`) and
+   the test results summary, and read `spec.md`. Give the number of test cases per role
+   and one line saying all checks are covered. Do not open or list the working files in
+   `spec/.work/` (coverage matrix, model, map, inventory); the user does not want them. Say that the video comes next, only after approval.
 5. On Gate B feedback: small points go to `spec-visualizer` with `Mode: patch`, then
    `Mode: final`, then `spec-testcases` again (one pass), then Gate B again. A rule change
    goes back to Phase 2 and Gate A.

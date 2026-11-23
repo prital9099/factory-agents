@@ -30,7 +30,8 @@ Read all of these in full before you write any code.
 | Repo instructions | `AGENTS.md` (or `CLAUDE.md`) | Stack, toolchain, commands, conventions. Follow them. |
 | Spec | `<job folder>/spec.md` | What to build; its acceptance criteria |
 | Requirement brief | `<job folder>/spec/requirement-brief.md` | The approved requirements. **The brief wins every conflict.** |
-| Test cases | `<job folder>/spec/testcases.xlsx` | Exact screen names, menu items, field labels, dropdown orders and messages; the acceptance checklist. Read every sheet, including the requirement-items and questions sheets. |
+| Test cases | `<job folder>/spec/testcases.xlsx` | Exact screen names, menu items, field labels, dropdown orders and messages; the acceptance checklist. Read every sheet: one sheet per role (cases for that role only, one scenario per case), and `spec/testcase-coverage.md`. |
+| Coverage | `<job folder>/spec/.work/` (`coverage-matrix.xlsx`, `testcase-map.csv`, `coverage-model.json`), working files only | Which requirement, control, state, flow and screen size each case checks; the conditions and flows to build |
 | Mockup and test data | `<job folder>/spec/requirements.html`, `<job folder>/spec/scenarios.json` | How screens look; the accounts, classes, dates and records the test cases use |
 | Sprint plan | `<job folder>/sprint-plan.xlsx`, `<job folder>/sprint-coverage.md` | The approved sprints, in order (Sprint Name, Sprint Description), and the test cases of each sprint. `sprint-plan-status.md` must start with `STATUS: DONE`. |
 | Feedback so far | `<job folder>/build.md` and `SPRINTS.md` in the worktree, if they exist | Where you are when you are resumed |
@@ -115,19 +116,21 @@ The first line of build.md is always one of:
    (`channel="chrome"`). It must:
    - start its own copy of the app on its own port with its own database, so no
      other data is touched;
-   - read every row of `testcases.xlsx` and match each case by screen and
-     description, so one check covers every role with the same case;
+   - read every sheet of `testcases.xlsx` (one per role), finding columns by
+     header name with spaces trimmed; run each case signed in as its sheet's
+     role, never as another role, even when another role has the same case;
    - follow the case's steps in the browser and compare the result with the
      Expected Result; check saved data in the database as well;
-   - run the screen-size cases at Desktop 1366×768, Tablet 768×1024 and Mobile
-     375×667 (overlap, cut-off text, sideways scrolling, reachable buttons and
+   - run each screen-size case at the size its Prerequisite names (Desktop 1366×768,
+     Tablet 768×1024, Mobile 375×667); a flow case does the other role's action first,
+     then signs in as the sheet's role (overlap, cut-off text, sideways scrolling, reachable buttons and
      menu, readable tables, elements that must stay visible);
    - run headed and slowed down, with a banner in a corner of the page showing the
      case id, sheet, screen and description, turning green (Pass) or red (Fail),
      with running counts, so the user can watch in real time;
    - take the test cases of sprint n from `sprint-coverage.md`;
    - take `--sprint <n>`, `--only <ids>`, `--headless`, `--fast` and `--fresh`;
-   - write Actual Result, Status (Pass / Fail), Remark and Run time into a
+   - write Actual Result and Status (Pass / Fail) into a
      **copy** of the workbook at `<job folder>/test-results/`. Never change the
      original. Keep earlier sprints' rows unless `--fresh`.
 4. **Check the runner.** Plant a problem (an overlap, cut-off text, sideways
@@ -165,8 +168,9 @@ For each sprint of the plan, in order:
      `agent-browser` CLI (run `agent-browser skills get core` first) with
      `--session <job-id>-builder` on every call; close it when you are done.
 3. **Record conflict decisions.** When the user decides on a conflict, write the
-   decision with its date into the Remark column of those rows and into `SPRINTS.md`.
-   Change the app only when the user asks for a change request.
+   decision with its date into `SPRINTS.md`, listing the case ids (the test-case
+   format has no Remark column). Change the app only when the user asks for a
+   change request.
 4. **Deploy.**
    - Deploy the sprint's code to the deployment target found in Phase 1, with the
      command AGENTS.md gives. Never deploy to production or to any environment AGENTS.md

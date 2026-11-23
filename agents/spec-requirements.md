@@ -73,6 +73,17 @@ relevant ones together, up front, so later rounds only handle new changes.
   ask "are you sure"? On which saves: every one, or only some? Exact message and
   button labels, what Cancel does (marks kept or cleared), which forms never show
   a box, and whether Esc or a tap outside the box counts as Cancel.
+- **Controls and their states.** For every screen: which dropdowns (their options,
+  order and default), which fields (required, limits, format), and when each button is
+  enabled or disabled (for example: is Save disabled until something changes, or after
+  the day is saved?). What does each list or report show when there is no data?
+- **Counts and totals.** Which counts show on each screen (present, absent, total), how
+  each is worked out, and when they update.
+- **Effects on other screens and roles.** For each action, which other screens or roles
+  must show the result, and when (for example: after the teacher saves, the parent sees
+  it at once; a holiday added by the admin shows as off in the register).
+- **Screen sizes.** Must every screen work on desktop, tablet and phone? Anything that
+  may be hidden or shortened on a phone?
 - **Exact on-screen wording.** When the user quotes screen text, ask whether to
   show it exactly as typed or corrected; do not fix their wording yourself.
 - **Retention and deletion.** How long are records kept, who deletes them, and is
@@ -137,6 +148,14 @@ Skip an item only when the user's request already settles it.
 # Requirement brief
 ## Goal
 ## Users and roles
+(For each role: the screens it can open, the actions it can take on each, and what it
+must not see or do. The test cases are written per role from this list.)
+## Screens and controls
+(For each screen: its dropdowns with options and default, its fields with limits, when each
+button is enabled or disabled, the counts it shows and how they are worked out, its
+messages, and what it shows with no data.)
+## Effects across screens and roles
+(Each action and where else its result must show, for which role, and when.)
 ## Scenarios
 (Each with a name, who does it, the steps, and realistic business data.)
 ## Rules and limits
