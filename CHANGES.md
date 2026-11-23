@@ -41,7 +41,29 @@ Based on `approval-gates`. Install with `install.ps1`, then start a new Claude C
   user's reply verbatim; these resumes do not count toward `MAX_RESUMES`); `test-results/` added
   to the job files.
 
-## 4. Not changed
+## 4. New sprint-planner agent
+- `agents/sprint-planner.md`: plans the development sprints after the spec is done.
+  - Starts only when the final HTML and the guide video are approved (Gates B and C); otherwise BLOCKED.
+  - Writes `sprint-plan.xlsx` with exactly two columns, Sprint Name and Sprint Description.
+  - Sprints are feature-wise, never role-wise; login is left out of the plan.
+  - A coverage check must show every test case in exactly one sprint (login cases listed apart)
+    before the plan goes to the user; development starts only after approval, one sprint at a time.
+- Wired into `/factory`: new stage `plan` and gate **G4.P** between the spec (G4) and the build.
+  The sprint planner runs after G4; once the user approves the plan it writes `DONE` and the
+  builder starts. A requirement change after G2 makes the plan stale and it is planned again.
+- `agents/builder.md`: no longer makes its own sprint plan. Phase 1 checks the approved plan; the
+  development sprints are the plan's sprints (same names, same order, each a whole feature for
+  every role), with one test sprint per plan sprint from `sprint-coverage.md`. If the app needs
+  sign-in, the builder asks at its first gate instead of adding a sprint.
+- `agents/spec-writer.md` and `README.md`: step 4 is now sprint planning.
+- The last sprint-planner rule now covers the whole process: each sprint is developed, tested
+  and deployed, and the next sprint starts only when all three are done and the user approves.
+  `agents/builder.md` follows it: Phase 1 checks the plan and finds the deployment target,
+  Phase 2 prepares the test run once, Phase 3 runs every sprint as develop → test (its own cases,
+  plus the earlier sprints' cases again) → deploy → gate. With no deploy target in AGENTS.md, a
+  sprint is deployed locally; production is never a sprint deployment.
+
+## 5. Not changed
 The four reviewers, `approver` and `render_video.py`.
 
 ## Notes

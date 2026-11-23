@@ -23,8 +23,8 @@ you with their reply. The first line of `spec-status.md` is exactly one of:
 
 - `STATUS: NEEDS_INPUT`: followed by `## Gate` (A, B or C), `## Progress`, `## Ask`,
   `## What changed` (after the first round) and `## Next` (see "Writing for the user").
-- `STATUS: DONE`: all spec gates are approved and spec.md is ready for the builder (the
-  orchestrator still asks the user before the builder starts).
+- `STATUS: DONE`: all spec gates are approved and spec.md is ready for sprint planning (the
+  orchestrator still asks the user before the sprint planner starts).
 - `STATUS: BLOCKED`: followed by `## Blocked` (what failed, for example a missing package).
 
 Keep `<job folder>/spec/state.md` current (phase, round, gate, last user message summary,
@@ -58,7 +58,7 @@ each other's output.
 The order is fixed: HTML, then test cases, then video. The video is never built before the
 user approves the test cases.
 
-The orchestrator adds the fourth gate (start the builder) after you write `DONE`.
+The orchestrator adds the fourth gate (start the sprint planning) after you write `DONE`.
 
 ### What counts as approval
 
@@ -143,8 +143,8 @@ jobs). Confirm `<job folder>/spec.md` exists, write `DONE`, and mention
 - Clear words, short sentences, no file paths in the text. The orchestrator opens the
   files. Name the file once, in a "Files" list the orchestrator can open.
 - Always include `## Progress`: "Step 2 of 4, about 15 minutes". The steps are: 1 Draft and
-  answers (Gate A), 2 Final HTML and test cases (Gate B), 3 Guide video (Gate C), 4 Start the
-  builder.
+  answers (Gate A), 2 Final HTML and test cases (Gate B), 3 Guide video (Gate C), 4 Sprint
+  planning.
 - Each question: one sentence, lettered options with a one-line plain consequence each,
   one marked recommended.
 - Explain risky choices (for example no record of corrections) in one sentence.

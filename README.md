@@ -1,7 +1,7 @@
 # Factory agents for Claude Code
 
 A team of Claude Code agents plus a `/factory` skill that takes a feature from request to
-merged code: **spec -> build -> four reviews -> approval -> merge**.
+merged code: **spec -> sprint plan -> build -> four reviews -> approval -> merge**.
 
 ## What is inside
 | Agents (`agents/`) | Role |
@@ -11,7 +11,8 @@ merged code: **spec -> build -> four reviews -> approval -> merge**.
 | `spec-visualizer` | Builds a clickable HTML mockup and `spec.md`; renders the narrated guide video last |
 | `spec-testcases` | Writes Excel test cases, runs them on the mockup, records pass/fail |
 | `spec-prompt-improver` | Rewrites the intake prompt for next time |
-| `builder` | Implements the spec on its own branch and tests it |
+| `sprint-planner` | Plans feature-wise sprints in Excel after the HTML and video are approved; every test case covered |
+| `builder` | Runs the approved sprint plan on its own branch: develops, tests and deploys each sprint before the next |
 | `reviewer-security`, `reviewer-ux`, `reviewer-ui`, `reviewer-code` | Four review lenses |
 | `approver` | Final gate: APPROVE (merge) or ESCALATE (human) |
 
@@ -35,7 +36,9 @@ Say `STOP` to leave the job where it is.
 | G1 | The draft HTML mockup and the answers to the questions | Final HTML is built, then the test cases from it |
 | G2 | The final HTML and the test cases (with `spec.md`) | Only now the guide video is built |
 | G3 | The guide video | `spec-prompt-improver` runs by itself, spec is done |
-| G4 | Spec done | `builder` |
+| G4 | Spec done (final HTML and video approved) | `sprint-planner` |
+| G4.P | The sprint plan (`sprint-plan.xlsx`), every test case covered | `builder` |
+| G4.S | Each builder sprint, after it is developed, tested and deployed | the builder's next sprint |
 | G5 | `builder` (each round) | the four reviewers |
 | G6 | the four reviews | `approver`, or the builder's rework |
 | G7 | `approver` decision | merge to local `main` |

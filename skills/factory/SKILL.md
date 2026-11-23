@@ -13,9 +13,9 @@ move the job along and keep `job.json` current.
 ## The loop
 
 ```
-feature → spec-writer → builder → [security, ux, ui, code] → WAIT FOR ALL
-                           ▲                                      │
-                           └──── any CHANGES: resume builder ◄────┤
+feature → spec-writer → sprint-planner → builder → [security, ux, ui, code] → WAIT FOR ALL
+                                            ▲                                      │
+                                            └──── any CHANGES: resume builder ◄────┤
                                                                   ▼ all PASS
                                      merge to main ◄─ APPROVE ─ approver ─ ESCALATE → needs-human
 ```
@@ -23,6 +23,7 @@ feature → spec-writer → builder → [security, ux, ui, code] → WAIT FOR AL
 | Step         | Agent (`subagent_type`) | Writes                                      |
 | ------------ | ----------------------- | ------------------------------------------- |
 | spec         | `spec-writer`           | `spec.md`                                   |
+| plan         | `sprint-planner`        | `sprint-plan.xlsx`, `sprint-coverage.md`    |
 | build        | `builder`               | `build.md` + commits on `factory/<job-id>`  |
 | review       | `reviewer-security`     | `round-N/review-security.md`                |
 |              | `reviewer-ux`           | `round-N/review-ux.md`                      |
@@ -73,8 +74,9 @@ Gates, in order (the first three are inside `spec-writer`, which asks for them t
 
 The spec order is fixed: HTML, then test cases, then video. The video is never built before
 G2 is approved.
-| G4 | Spec DONE | `builder` (round 1) |
-| G4.S | Each `builder` sprint: the plan, every development sprint, every test sprint, review fixes (`build.md` says `NEEDS_INPUT`) | the builder's next sprint |
+| G4 | Spec DONE (the final HTML and the guide video approved) | `sprint-planner` |
+| G4.P | The sprint plan: feature-wise sprints in `sprint-plan.xlsx`, every test case covered (`sprint-plan-status.md` says `NEEDS_INPUT`) | `builder` (round 1), once the planner writes `DONE` |
+| G4.S | Each `builder` gate: its check of the plan, every sprint after it is developed, tested and deployed, review fixes (`build.md` says `NEEDS_INPUT`) | the builder's next sprint |
 | G5 | `builder` (every round, after its last sprint) | the four reviewers |
 | G6 | the four reviews of a round | `approver`, or resuming the builder on CHANGES |
 | G7 | `approver` decision | merge to `main` |
@@ -112,6 +114,9 @@ state that never lands in a commit.
 <repo>/factory/backlog.md                      queue for /factory next
 <repo>/factory/jobs/<job-id>/job.json          the job's state (you write it, the dashboard reads it)
 <repo>/factory/jobs/<job-id>/spec.md
+<repo>/factory/jobs/<job-id>/sprint-plan.xlsx   the sprint plan (Sprint Name, Sprint Description), by sprint-planner
+<repo>/factory/jobs/<job-id>/sprint-coverage.md every test case and its sprint, by sprint-planner
+<repo>/factory/jobs/<job-id>/sprint-plan-status.md
 <repo>/factory/jobs/<job-id>/build.md
 <repo>/factory/jobs/<job-id>/test-results/       results workbook (copy of testcases.xlsx) and run logs, by builder
 <repo>/factory/jobs/<job-id>/rework-<k>.md     written by you, from /factory rework
@@ -130,7 +135,7 @@ state that never lands in a commit.
   "reviews": { "security": "CHANGES", "ux": "PASS", "ui": "pending", "code": "PASS" } }
 ```
 
-- `stage` is one of `spec`, `build`, `review`, `approve`, `merged`,
+- `stage` is one of `spec`, `plan`, `build`, `review`, `approve`, `merged`,
   `needs-human`. Worktree setup counts as `spec`.
 - `round` is the current review round (0 until the first round starts).
 - `reviews` holds the current round only. Each value is `pending`, `PASS` or
@@ -182,20 +187,39 @@ gets `5102 + 10n`, appended as ` Port: <port>.`
      continue from `spec/state.md`, `spec/spec-status.md` and `spec/feedback-log.md`, then
      pass the user's reply verbatim.
    - `STATUS: BLOCKED`: go to **Needs human** with the `## Blocked` text.
-   - `STATUS: DONE`: check that `spec.md` exists, then **GATE G4**: show `spec.md` and ask
-     "Approve starting the builder?" Do not start the builder before `APPROVED`.
+   - `STATUS: DONE`: check that `spec.md`, `spec/requirements.html` and `spec/guide.mp4`
+     exist, then **GATE G4**: show `spec.md` and ask "Approve starting the sprint planning?"
+     Do not start the sprint planner before `APPROVED`.
    If `spec/spec-status.md` is missing after a spec-writer run (an old-style one-shot
-   run), just check that `spec.md` exists.
-4. **Build.** Set `stage: "build"`. Spawn `builder` **with the name
+   run), just check that `spec.md` exists; the sprint planner then checks the approvals itself.
+4. **Sprint plan.** Set `stage: "plan"`. Spawn `sprint-planner` **with the name
+   `plan-<job-id>`** and the prompt `<paths> Plan the sprints.` Loop:
+   - Wait for it to finish, then read the first line of
+     `factory/jobs/<job-id>/sprint-plan-status.md`.
+   - `STATUS: NEEDS_INPUT`: **GATE G4.P** (set `awaiting` to `G4.P`). Open `sprint-plan.xlsx`
+     and `sprint-coverage.md` for the user, and show the plan table, the coverage line and the
+     questions in plain language. Wait for their real reply in chat; never approve for them.
+     Resume the same agent with `SendMessage` to `plan-<job-id>`, passing the reply verbatim,
+     and repeat. If the resume fails, spawn a fresh `sprint-planner` with the same paths, tell
+     it to continue from `sprint-plan-status.md` and `sprint-plan.xlsx`, and pass the reply verbatim.
+   - `STATUS: BLOCKED`: go to **Needs human** with the `## Blocked` text (for example: the
+     guide video is not approved yet).
+   - `STATUS: DONE`: the user approved the plan at G4.P and every test case is covered. Check
+     that `sprint-plan.xlsx` exists and go straight to **Build** (no second ask).
+   A later change to the requirements (back to G1 or G2) also makes the plan stale: say that
+   G3, G4 and G4.P must be approved again, and re-run the sprint planner after the spec is DONE.
+5. **Build.** Set `stage: "build"`. Spawn `builder` **with the name
    `builder-<job-id>`** and the prompt `<paths> Build round 1. Port: <port>.`
+   The builder runs the approved sprint plan one sprint at a time: each sprint is developed,
+   tested and deployed before the next one starts.
    Wait for it to finish, then go to **Build check**.
 
 ### Build check
 
 Read the first line of `build.md`.
 
-- `STATUS: NEEDS_INPUT`: a builder sprint is finished (the plan, a development sprint, a test
-  sprint, or the fixes for a review round). **GATE G4.S** (set `awaiting` to `G4.S <gate text>`):
+- `STATUS: NEEDS_INPUT`: the builder's plan check, a sprint (developed, tested and deployed), or
+  the fixes for a review round are finished. **GATE G4.S** (set `awaiting` to `G4.S <gate text>`):
   read `## Gate`, `## Progress`, `## Result`, `## Conflicts and questions`, `## Output` and
   `## Ask`. Open the files in `## Output` for the user (`SPRINTS.md`, the results workbook in
   `test-results/`), and show the sprint result, the failures with their reasons and the
@@ -271,7 +295,7 @@ printed. Never push.
 
 Set `stage: "needs-human"`. The branch and its worktree stay for the human to
 inspect. Tell the user which job is waiting, give the worktree path, and quote
-`decision.md` (or the BLOCKED reason from `build.md`).
+`decision.md` (or the BLOCKED reason from `sprint-plan-status.md` or `build.md`).
 
 ## /factory next
 
